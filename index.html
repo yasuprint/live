@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout - Firebase Live Save</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .checkout-container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 { margin-bottom: 20px; }
+    input, textarea {
+      width: 100%; padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .place-order {
+      width: 100%;
+      background-color: #d32f2f;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .product {
+      display: flex; gap: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 16px;
+    }
+    .product img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+    .details { flex-grow: 1; }
+    .subtotal {
+      text-align: right;
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <h2>Checkout</h2>
+<a href="penal.html" class="logo">inkhut<span>store</span></a>
+    <div id="productSection"></div>
+
+    <div class="subtotal" id="subtotalText">Subtotal: ₹0.00</div>
+
+    <input type="text" id="custName" placeholder="Customer Name" required />
+    <input type="tel" id="custMobile" placeholder="Mobile Number" required />
+    <textarea id="custAddress" rows="3" placeholder="Full Address"></textarea>
+    <input type="text" id="custPincode" placeholder="Pincode" />
+
+    <button class="place-order" onclick="placeOrder()">Place Order & Pay</button>
+  </div>
+
+  <!-- Firebase JS SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // अपनी Firebase कॉन्फिग यहां डालें (Firebase Console से कॉपी करें)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    // Firebase इनिशियलाइज़ करें
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // प्रोडक्ट डाटा लोकल स्टोरेज से लोड करें
+    const productData = JSON.parse(localStorage.getItem("cartProduct"));
+    if (productData) {
+      const productSection = document.getElementById("productSection");
+      const html = `
+        <div class="product">
+          <img src="${productData.image}" />
+          <div class="details">
+            <div><strong>${productData.title}</strong></div>
+            <div>${productData.subtitle || ''}</div>
+            <div>Qty: ${productData.qty}</div>
+            <div>Price: ₹${(productData.price * productData.qty).toFixed(2)}</div>
+          </div>
+        </div>
+      `;
+      productSection.innerHTML = html;
+      document.getElementById("subtotalText").textContent = "Subtotal: ₹" + (productData.price * productData.qty).toFixed(2);
+    }
+
+    // ऑर्डर सेव और Firebase में डालने वाला फंक्शन
+    function placeOrder() {
+      const name = document.getElementById("custName").value.trim();
+      const mobile = document.getElementById("custMobile").value.trim();
+      const address = document.getElementById("custAddress").value.trim();
+      const pincode = document.getElementById("custPincode").value.trim();
+
+      if (!name || !mobile || !address || !pincode) {
+        alert("कृपया सभी ग्राहक जानकारी भरें।");
+        return;
+      }
+
+      if (!productData) {
+        alert("कोई प्रोडक्ट नहीं मिला।");
+        return;
+      }
+
+      // ऑर्डर ऑब्जेक्ट बनाएं
+      const order = {
+        title: productData.title,
+        subtitle: productData.subtitle || '',
+        image: productData.image,
+        qty: productData.qty,
+        price: productData.price,
+        total: productData.price * productData.qty,
+        customer: {
+          name,
+          mobile,
+          address,
+          pincode
+        },
+        orderStatus: "Pending",
+        paymentStatus: "Pending",
+        createdAt: Date.now()
+      };
+
+      // Firebase के orders node में नया ऑर्डर डालें (push से unique id बन जाएगी)
+      const ordersRef = database.ref('orders');
+      ordersRef.push(order)
+        .then(() => {
+          alert("ऑर्डर सफलतापूर्वक जमा हो गया। अब आप पेमेंट पेज पर जा सकते हैं।");
+          // ऑर्डर लोकल स्टोरेज में सेव कर सकते हैं अगर चाहें
+          localStorage.setItem("currentOrder", JSON.stringify(order));
+          // पेमेन्ट पेज पर रीडायरेक्ट करें
+          window.location.href = "payment.html";
+        })
+        .catch((error) => {
+          alert("ऑर्डर सेव करने में त्रुटि: " + error.message);
+        });
+    }
+  </script>
+</body>
+</html>
