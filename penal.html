@@ -1,0 +1,153 @@
+    <!DOCTYPE html>
+    <html lang="hi">
+    <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Panel - Orders</title>
+    <style>
+        body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 0; padding: 0;
+        }
+        .admin-container {
+        max-width: 900px;
+        margin: 30px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+        margin-bottom: 20px;
+        text-align: center;
+        }
+        table {
+        width: 100%;
+        border-collapse: collapse;
+        }
+        th, td {
+        padding: 12px 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+        }
+        th {
+        background-color: #d32f2f;
+        color: white;
+        }
+        tr:nth-child(even) {
+        background-color: #f9f9f9;
+        }
+        .order-image {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        border-radius: 6px;
+        }
+    </style>
+    </head>
+    <body>
+    <div class="admin-container">
+        <h2>सभी ऑर्डर (Live Updates)</h2>
+        <table>
+        <thead>
+            <tr>
+            <th>प्रोडक्ट</th>
+            <th>छवि</th>
+            <th>क्वांटिटी</th>
+            <th>ग्राहक का नाम</th>
+            <th>मोबाइल नंबर</th>
+            <th>पता</th>
+            <th>पिनकोड</th>
+            <th>कुल मूल्य (₹)</th>
+            <th>आदेश स्थिति</th>
+            <th>भुगतान स्थिति</th>
+            <th>आदेश समय</th>
+            </tr>
+        </thead>
+        <tbody id="ordersTableBody">
+            <!-- Orders dynamically added here -->
+        </tbody>
+        </table>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        // अपनी Firebase कॉन्फिग यहां डालें (Firebase Console से कॉपी करें)
+        const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+        };
+
+        // Firebase इनिशियलाइज़ करें
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const ordersTableBody = document.getElementById("ordersTableBody");
+
+        // लाइव ऑर्डर पढ़ने के लिए Firebase 'orders' node को listen करें
+        const ordersRef = database.ref('orders');
+
+        // जब नया ऑर्डर जोड़ा जाए तो उसे टेबल में दिखाएं
+        ordersRef.on('child_added', (snapshot) => {
+        const order = snapshot.val();
+        addOrderRow(order);
+        });
+
+        // अगर ऑर्डर अपडेट भी करना है तो इस तरह से 'child_changed' यूज कर सकते हैं
+        ordersRef.on('child_changed', (snapshot) => {
+        const updatedOrder = snapshot.val();
+        updateOrderRow(snapshot.key, updatedOrder);
+        });
+
+        // ऑर्डर जोड़ने वाला फंक्शन
+        function addOrderRow(order) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("id", order.createdAt); // unique id के लिए createdAt यूज कर रहे हैं, आप snapshot.key भी यूज कर सकते हैं
+
+        tr.innerHTML = `
+            <td>${order.title} ${order.subtitle ? '(' + order.subtitle + ')' : ''}</td>
+            <td><img src="${order.image}" alt="Product Image" class="order-image" /></td>
+            <td>${order.qty}</td>
+            <td>${order.customer.name}</td>
+            <td>${order.customer.mobile}</td>
+            <td>${order.customer.address}</td>
+            <td>${order.customer.pincode}</td>
+            <td>₹${order.total.toFixed(2)}</td>
+            <td>${order.orderStatus}</td>
+            <td>${order.paymentStatus}</td>
+            <td>${new Date(order.createdAt).toLocaleString('hi-IN')}</td>
+        `;
+
+        ordersTableBody.appendChild(tr);
+        }
+
+        // अगर ऑर्डर अपडेट करना हो तो (optional)
+        function updateOrderRow(orderId, order) {
+        const tr = document.getElementById(orderId);
+        if (!tr) return;
+        tr.innerHTML = `
+            <td>${order.title} ${order.subtitle ? '(' + order.subtitle + ')' : ''}</td>
+            <td><img src="${order.image}" alt="Product Image" class="order-image" /></td>
+            <td>${order.qty}</td>
+            <td>${order.customer.name}</td>
+            <td>${order.customer.mobile}</td>
+            <td>${order.customer.address}</td>
+            <td>${order.customer.pincode}</td>
+            <td>₹${order.total.toFixed(2)}</td>
+            <td>${order.orderStatus}</td>
+            <td>${order.paymentStatus}</td>
+            <td>${new Date(order.createdAt).toLocaleString('hi-IN')}</td>
+        `;
+        }
+    </script>
+    </body>
+    </html>
